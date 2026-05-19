@@ -73,6 +73,7 @@ function getTitleFromItem(
     .get()
     .filter(Boolean)
     .filter((text) => !text.includes("Up"))
+    .filter((text) => !/^\d{1,2}\s*,\s*\d{1,2}(?:\s*,\s*\d{1,2})?\s*일$/.test(text))
     .filter((text) => !/^\d+(\.\d+)?\(\s*[\d,]+\s*\)$/.test(text));
 
   return candidates.sort((a, b) => b.length - a.length)[0] ?? "";

@@ -79,6 +79,18 @@ function isUp(item: any) {
   return badges.includes("u");
 }
 
+function getLezhinScheduleText(item: any, day: string) {
+  if (day !== "10일") return day;
+
+  const anchor = Number(item?.schedule?.anchor);
+
+  if (!anchor || anchor < 1 || anchor > 10) {
+    return "10일 주기";
+  }
+
+  return `${anchor}, ${anchor + 10}, ${anchor + 20}일`;
+}
+
 async function fetchLezhinDay(filter: string, offset: number) {
   const url = `https://api.lezhin.com/v2/content-list/weekday?filter=${filter}&offset=${offset}&limit=100`;
 
@@ -168,7 +180,7 @@ export async function GET() {
             day: dayItem.day,
             title,
             authors: getAuthors(item),
-            schedule: dayItem.day === "10일" ? "10일 주기" : dayItem.day,
+            schedule: getLezhinScheduleText(item, dayItem.day),
             url: `https://www.lezhin.com/ko/comic/${alias}`,
             cover: getCoverById(id, item.updatedAt),
             isUp: isUp(item),

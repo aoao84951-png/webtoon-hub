@@ -39,7 +39,8 @@ function isTenDayItem(item: Webtoon) {
 function getCycleText(item: Webtoon) {
   const text = item.schedule ?? "";
   const match = text.match(/(\d+\s*,\s*\d+\s*,?\s*\d*일)/);
-  return match?.[1] ?? text.replace("10일 주기", "").trim();
+
+  return match?.[1] ?? "";
 }
 
 function getPlatformClass(platform: string) {
@@ -328,7 +329,7 @@ export default function Home() {
 
                     {item.isUp && <span className="cover-up">UP</span>}
 
-                    {isTenDayItem(item) && (
+                    {isTenDayItem(item) && getCycleText(item) && (
                       <span className="cycle">{getCycleText(item)}</span>
                     )}
                   </div>
