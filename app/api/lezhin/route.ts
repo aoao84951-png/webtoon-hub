@@ -27,6 +27,7 @@ const LEZHIN_DAYS: LezhinDay[] = [
   { day: "금", filter: "fri" },
   { day: "토", filter: "sat" },
   { day: "일", filter: "sun" },
+  { day: "10일", filter: "day_10" },
 ];
 
 function normalizeArray(value: any) {
@@ -143,18 +144,32 @@ async function fetchTenDayByBrowser(): Promise<WebtoonItem[]> {
 
     const page = await context.newPage();
 
-    await page.goto("https://www.lezhin.com/ko/scheduled?day=n", {
+    await page.goto("https://www.lezhin.com/ko/scheduled", {
       waitUntil: "networkidle",
       timeout: 30000,
     });
 
     await page.waitForTimeout(1200);
 
-    const tenTab = page.locator('[data-value="n"]').first();
+    console.log("[lezhin url]", page.url());
+    console.log("[lezhin title]", await page.title());
+    console.log("[lezhin body sample]", (await page.locator("body").innerText()).slice(0, 1000));
+
+    const tenTab = page
+      .locator('button, a, [role="tab"]')
+      .filter({ hasText: /10일|열흘|1\s*\/\s*11\s*\/\s*21/ })
+      .first();
+
     if (await tenTab.count()) {
       await tenTab.click();
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(1500);
     }
+
+    console.log("[lezhin after click url]", page.url());
+    console.log(
+      "[lezhin after click sample]",
+      (await page.locator("body").innerText()).slice(0, 1000)
+    );
 
     for (let i = 0; i < 8; i += 1) {
       await page.mouse.wheel(0, 900);
@@ -284,7 +299,7 @@ export async function GET() {
             day: dayItem.day,
             title,
             authors: getAuthors(item),
-            schedule: dayItem.day,
+            schedule: dayItem.day === "10일" ? "10일 주기" : dayItem.day,
             url: `https://www.lezhin.com/ko/comic/${alias}`,
             cover: getCoverById(id, item.updatedAt),
             isUp: isUp(item),
@@ -296,9 +311,7 @@ export async function GET() {
       }
     }
 
-    const tenDayItems = await fetchTenDayByBrowser();
-
-    const items = dedupeItems([...results, ...tenDayItems]);
+    const items = dedupeItems(results);
 
     return NextResponse.json({
       ok: true,

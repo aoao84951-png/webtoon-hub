@@ -17,6 +17,7 @@ type Webtoon = {
 const DAYS = ["월", "화", "수", "목", "금", "토", "일", "10일"];
 const PLATFORMS = ["전체", "리디", "레진코믹스", "봄툰", "미스터블루"];
 const PAGE_SIZE = 30;
+const CACHE_KEY = "webtoon-schedule-cache";
 
 function getTodayKor() {
   return ["일", "월", "화", "수", "목", "금", "토"][new Date().getDay()];
@@ -101,13 +102,28 @@ export default function Home() {
   const [selectedMenu, setSelectedMenu] = useState<"schedule" | "liked">(
     "schedule"
   );
-  const [liked, setLiked] = useState<string[]>([]);
+  const [liked, setLiked] = useState<Webtoon[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   async function loadItems() {
     setRefreshing(true);
+  
+    const cached = localStorage.getItem(CACHE_KEY);
+  
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+  
+        if (Array.isArray(parsed?.items)) {
+          setItems(parsed.items);
+          setLoading(false);
+        }
+      } catch {
+        localStorage.removeItem(CACHE_KEY);
+      }
+    }
   
     try {
       const apis = ["/api/ridi", "/api/lezhin", "/api/bomtoon", "/api/mrblue"];
@@ -131,9 +147,20 @@ export default function Home() {
       );
   
       setItems(merged);
+  
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          updatedAt: Date.now(),
+          items: merged,
+        })
+      );
     } catch (error) {
       console.error("loadItems error:", error);
-      setItems([]);
+  
+      if (!cached) {
+        setItems([]);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -155,10 +182,16 @@ export default function Home() {
     setPage(0);
   }, [selectedDay, selectedPlatform, selectedMenu]);
 
-  function toggleLike(url: string) {
-    setLiked((prev) =>
-      prev.includes(url) ? prev.filter((v) => v !== url) : [...prev, url]
-    );
+  function toggleLike(item: Webtoon) {
+    setLiked((prev) => {
+      const exists = prev.some((v) => v.url === item.url);
+  
+      if (exists) {
+        return prev.filter((v) => v.url !== item.url);
+      }
+  
+      return [...prev, item];
+    });
   }
 
   const filteredItems = useMemo(() => {
@@ -176,7 +209,9 @@ export default function Home() {
     });
 
     if (selectedMenu === "liked") {
-      base = base.filter((item) => liked.includes(item.url));
+      base = liked.filter((item) =>
+        platformMatch(item.platform, selectedPlatform)
+      );
     }
 
     return base.sort((a, b) => {
@@ -259,7 +294,7 @@ export default function Home() {
       ) : (
         <section className="cards">
           {visibleItems.map((item, index) => {
-            const isLiked = liked.includes(item.url);
+            const isLiked = liked.some((v) => v.url === item.url);
 
             return (
               <div
@@ -268,7 +303,7 @@ export default function Home() {
               >
                 <button
                   className={`like-button ${isLiked ? "liked" : ""}`}
-                  onClick={() => toggleLike(item.url)}
+                  onClick={() => toggleLike(item)}
                   aria-label="찜하기"
                 >
                   ♥
