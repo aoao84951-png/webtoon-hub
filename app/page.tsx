@@ -361,7 +361,14 @@ export default function Home() {
           <button
             key={index}
             className={index === page ? "active" : ""}
-            onClick={() => setPage(index)}
+            onClick={() => {
+              setPage(index);
+            
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
+            }}
           >
             {index + 1}
           </button>
