@@ -106,6 +106,7 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   async function loadItems() {
     setRefreshing(true);
@@ -164,6 +165,7 @@ export default function Home() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setHasLoadedOnce(true);
     }
   }
 
@@ -283,7 +285,9 @@ export default function Home() {
         </div>
       </section>
 
-      {loading ? (
+      {loading || !hasLoadedOnce ? (
+        <div className="empty">불러오는 중...</div>
+      ) : refreshing && visibleItems.length === 0 ? (
         <div className="empty">불러오는 중...</div>
       ) : visibleItems.length === 0 ? (
         <div className="empty">
