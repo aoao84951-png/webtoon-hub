@@ -21,9 +21,13 @@ function token() {
 }
 
 function headers(extra: Record<string, string> = {}) {
+  const authToken = token();
+  const cookie = process.env.BOMTOON_COOKIE || "";
+
   return {
     accept: "*/*",
-    authorization: `Bearer ${token()}`,
+    ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
+    ...(cookie ? { cookie } : {}),
     referer: "https://www.bomtoon.com/bom/comic/weekly",
     "x-balcony-id": "BOMTOON_COM",
     "x-balcony-timezone": "Asia/Seoul",
@@ -67,7 +71,8 @@ async function fetchIds(day: any) {
     `&isIncludeTen=false` +
     `&genres=${BOMTOON_GENRE_BL}` +
     `&sort=POPULAR` +
-    `&adultToggle=true`;
+    `&adultToggle=true` +
+    `&limit=100`;
 
   const res = await fetch(url, {
     headers: headers(),
@@ -75,6 +80,8 @@ async function fetchIds(day: any) {
   });
 
   const data = await res.json();
+
+  console.log("[bomtoon ids]", day.label, data?.data?.length, data?.result, data?.error);
 
   if (data?.result !== "SUCCESS" || !Array.isArray(data?.data)) {
     console.error("[bomtoon schedule error]", day.label, data);
@@ -85,54 +92,53 @@ async function fetchIds(day: any) {
 }
 
 async function fetchDetails(ids: number[]) {
-    if (!ids.length) return [];
-  
-    const chunks: number[][] = [];
-  
-    for (let i = 0; i < ids.length; i += 30) {
-      chunks.push(ids.slice(i, i + 30));
-    }
-  
-    const results = [];
-  
-    for (const chunk of chunks) {
-      const res = await fetch(
-        "https://www.bomtoon.com/api/balcony-api-v2/contents/tab/details",
-        {
-          method: "POST",
-          headers: {
-            ...headers(),
-            "content-type": "application/json;charset=UTF-8",
-          },
-          body: JSON.stringify({
-            contentsIds: chunk.join(","),
-            contentsThumbnailType:
-              "VERTICAL,MAIN,SQUARE,VERTICAL_NON_ADULT",
-          }),
-          cache: "no-store",
-        }
-      );
-  
-      const data = await res.json();
-  
-      if (data?.result !== "SUCCESS") {
-        console.error("[bomtoon details error]", data);
-        continue;
+  if (!ids.length) return [];
+
+  const chunks: number[][] = [];
+
+  for (let i = 0; i < ids.length; i += 30) {
+    chunks.push(ids.slice(i, i + 30));
+  }
+
+  const results = [];
+
+  for (const chunk of chunks) {
+    const res = await fetch(
+      "https://www.bomtoon.com/api/balcony-api-v2/contents/tab/details",
+      {
+        method: "POST",
+        headers: {
+          ...headers(),
+          "content-type": "application/json;charset=UTF-8",
+        },
+        body: JSON.stringify({
+          contentsIds: chunk.join(","),
+          contentsThumbnailType: "VERTICAL,MAIN,SQUARE,VERTICAL_NON_ADULT",
+        }),
+        cache: "no-store",
       }
-  
-      if (Array.isArray(data?.data)) {
-        results.push(...data.data);
-      }
+    );
+
+    const data = await res.json();
+
+    if (data?.result !== "SUCCESS") {
+      console.error("[bomtoon details error]", data);
+      continue;
     }
-  
-    return results;
+
+    if (Array.isArray(data?.data)) {
+      results.push(...data.data);
+    }
+  }
+
+  return results;
 }
 
 async function fetchDay(day: any) {
   const ids = await fetchIds(day);
   const details = await fetchDetails(ids);
 
-  const mapped = details
+  return details
     .map((item: any) => ({
       platform: "봄툰",
       day: day.label,
@@ -146,21 +152,10 @@ async function fetchDay(day: any) {
       isUp: Boolean(item?.badgeUp || item?.badge?.up),
     }))
     .filter((v: any) => v.title);
-
-  return mapped;
 }
 
 export async function GET() {
   try {
-    if (!token()) {
-      return NextResponse.json({
-        ok: false,
-        count: 0,
-        webtoons: [],
-        message: "BOMTOON_AUTH_TOKEN 없음",
-      });
-    }
-
     const results = [];
 
     for (const day of DAYS) {

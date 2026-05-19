@@ -108,29 +108,32 @@ export default function Home() {
 
   async function loadItems() {
     setRefreshing(true);
-
+  
     try {
-      const [ridiRes, lezhinRes, bomtoonRes, mrblueRes] = await Promise.all([
-        fetch(`/api/ridi?t=${Date.now()}`),
-        fetch(`/api/lezhin?t=${Date.now()}`),
-        fetch(`/api/bomtoon?t=${Date.now()}`),
-        fetch(`/api/mrblue?t=${Date.now()}`),
-      ]);
-
-      const [ridiData, lezhinData, bomtoonData, mrblueData] =
-        await Promise.all([
-          ridiRes.json(),
-          lezhinRes.json(),
-          bomtoonRes.json(),
-          mrblueRes.json(),
-        ]);
-
-      setItems([
-        ...(ridiData.items ?? []),
-        ...(lezhinData.items ?? []),
-        ...(bomtoonData.items ?? []),
-        ...(mrblueData.items ?? []),
-      ]);
+      const apis = ["/api/ridi", "/api/lezhin", "/api/bomtoon", "/api/mrblue"];
+  
+      const results = await Promise.allSettled(
+        apis.map(async (api) => {
+          const res = await fetch(`${api}?t=${Date.now()}`);
+  
+          if (!res.ok) {
+            console.error(`${api} failed`, res.status);
+            return [];
+          }
+  
+          const data = await res.json();
+          return data.items ?? data.webtoons ?? [];
+        })
+      );
+  
+      const merged = results.flatMap((result) =>
+        result.status === "fulfilled" ? result.value : []
+      );
+  
+      setItems(merged);
+    } catch (error) {
+      console.error("loadItems error:", error);
+      setItems([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
