@@ -47,13 +47,6 @@ function getCoverFromPid(pid: string) {
     return pid ? `https://img.mrblue.com/prod_img/comics/${pid}/square_w300.jpg` : "";
 }
 
-function normalizeCover(src: string) {
-  if (!src) return "";
-  if (src.startsWith("http")) return src;
-  if (src.startsWith("//")) return `https:${src}`;
-  if (src.startsWith("/")) return `${MOBILE_BASE_URL}${src}`;
-  return src;
-}
 
 function pickCover($: cheerio.CheerioAPI, el: any, pid: string) {
     const imgs = $(el).find("img").toArray();
@@ -185,9 +178,8 @@ function parseItems(html: string, day: string, blPids: Set<string>) {
     const writer = $(el).find(".CategoryTitle_text-desc__BvYr0").first().text().trim();
 
     const isUp =
-        $(el).text().toUpperCase().includes("UP") ||
-        $(el).find('[class*="up"], [class*="Up"], [class*="UP"]').length > 0 ||
-        $(el).find('img[alt*="UP"], img[src*="up"], img[src*="UP"]').length > 0;
+      $(el).find('[aria-labelledby*="LabelStateUp-icon"]').length > 0 ||
+      $(el).find('svg[aria-labelledby*="LabelStateUp"]').length > 0;
 
     results.push({
         pid,
