@@ -345,12 +345,7 @@ export default function Home() {
                   ♥
                 </button>
 
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="card"
-                >
+                <div className="card">
                   <div className="cover">
                     {item.cover ? (
                       <img src={item.cover} alt={item.title} />
@@ -366,22 +361,28 @@ export default function Home() {
                   </div>
 
                   <div className="info">
-                    <h3>{item.title}</h3>
+                  <h3>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="title-link"
+                    >
+                      {item.title}
+                    </a>
+                  </h3>
 
                     <p>{item.authors || "작가 정보 없음"}</p>
 
                     <div className="meta">
-                      <span
-                        className={`platform ${getPlatformClass(
-                          item.platform
-                        )}`}
-                      >
+                      <span className={`platform ${getPlatformClass(item.platform)}`}>
                         {item.platform}
                       </span>
                       <span className="genre">BL</span>
+
                     </div>
                   </div>
-                </a>
+                </div>
               </div>
             );
           })}
@@ -543,17 +544,6 @@ export default function Home() {
 
         .card-wrap {
           position: relative;
-          isolation: isolate;
-        }
-
-        .card-wrap.is-liked::before {
-          content: "";
-          position: absolute;
-          inset: -8px;
-          z-index: -1;
-          border-radius: 16px;
-          background: rgba(255, 95, 158, 0.08);
-          pointer-events: none;
         }
 
         .like-button {
@@ -657,6 +647,15 @@ export default function Home() {
           line-height: 1.25;
           font-weight: 900;
           letter-spacing: -0.04em;
+        }
+
+        .title-link {
+          color: inherit;
+          text-decoration: none;
+        }
+
+        .title-link:hover {
+          opacity: 0.72;
         }
 
         .info p {
