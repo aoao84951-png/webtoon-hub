@@ -59,6 +59,27 @@ function platformMatch(itemPlatform: string, selectedPlatform: string) {
     .includes(selectedPlatform.replace(/\s/g, ""));
 }
 
+function getWebtoonKey(item: Webtoon) {
+  return `${item.platform}-${item.url || item.title}`.replace(/\s/g, "").toLowerCase();
+}
+
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+
+  document.documentElement.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+
+  document.body.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+}
+
 function WebtoonIcon() {
   return (
     <svg
@@ -186,11 +207,13 @@ export default function Home() {
   }, [selectedDay, selectedPlatform, selectedMenu]);
 
   function toggleLike(item: Webtoon) {
+    const itemKey = getWebtoonKey(item);
+  
     setLiked((prev) => {
-      const exists = prev.some((v) => v.url === item.url);
+      const exists = prev.some((v) => getWebtoonKey(v) === itemKey);
   
       if (exists) {
-        return prev.filter((v) => v.url !== item.url);
+        return prev.filter((v) => getWebtoonKey(v) !== itemKey);
       }
   
       return [...prev, item];
@@ -212,7 +235,13 @@ export default function Home() {
     });
 
     if (selectedMenu === "liked") {
-      base = liked.filter((item) =>
+      const map = new Map<string, Webtoon>();
+    
+      liked.forEach((item) => {
+        map.set(getWebtoonKey(item), item);
+      });
+    
+      base = Array.from(map.values()).filter((item) =>
         platformMatch(item.platform, selectedPlatform)
       );
     }
@@ -299,12 +328,14 @@ export default function Home() {
       ) : (
         <section className="cards">
           {visibleItems.map((item, index) => {
-            const isLiked = liked.some((v) => v.url === item.url);
+            const isLiked = liked.some((v) => getWebtoonKey(v) === getWebtoonKey(item));
 
             return (
               <div
                 key={`${item.platform}-${item.day}-${item.title}-${item.url}-${index}`}
-                className="card-wrap"
+                className={`card-wrap ${
+                  isLiked && selectedMenu === "schedule" ? "is-liked" : ""
+                }`}
               >
                 <button
                   className={`like-button ${isLiked ? "liked" : ""}`}
@@ -364,11 +395,7 @@ export default function Home() {
             className={index === page ? "active" : ""}
             onClick={() => {
               setPage(index);
-            
-              window.scrollTo({
-                top: 0,
-                behavior: "smooth",
-              });
+              setTimeout(scrollToTop, 0);
             }}
           >
             {index + 1}
@@ -516,6 +543,17 @@ export default function Home() {
 
         .card-wrap {
           position: relative;
+          isolation: isolate;
+        }
+
+        .card-wrap.is-liked::before {
+          content: "";
+          position: absolute;
+          inset: -8px;
+          z-index: -1;
+          border-radius: 16px;
+          background: rgba(255, 95, 158, 0.08);
+          pointer-events: none;
         }
 
         .like-button {
